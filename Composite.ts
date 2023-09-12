@@ -30,33 +30,51 @@
 import fs from "fs";
 import path from "path"
 
+// act as component
 interface FileEntity {
+        // properties
         name : string;
         path : string;
+        
+        // methods
         // indent : 앞에 몇 칸 띄울지..
         show(indent : number) : void
+        add?(child: FileEntity) : void
+        remove() : string | null
 }
 
-class File implements FileEntity {
+// composite (leaf)
+export class File implements FileEntity {
         constructor(public name : string, public path : string) {}
+
         show(indent : number) {
                 console.log(`${" ".repeat(indent)}File: ${this.name}`);
         }
+        
+        remove() {
+                try {
+                        fs.unlinkSync(this.path)
+                        return null        
+                } catch (e) {
+                        return `Error: Could not delete the file. ${e}`
+                }
+
+        }
 }
 
-class Folder implements FileEntity {
+// composite (composition)
+export class Folder implements FileEntity {
         name : string;
         path : string;
         
         // 폴더 내부의 파일들 목록인듯
-        private children : FileEntity[] = [] 
+        public children : FileEntity[] = [] 
         
         constructor(name : string, path : string) {
                 this.name = name
                 this.path = path
         }
-        
-        
+
         show(indent : number) {
                 console.log(`${" ".repeat(indent)}Folder: ${this.name}`)
                 for (const child of this.children) {
@@ -64,6 +82,43 @@ class Folder implements FileEntity {
                 }
         }
         
+        add(child: FileEntity) : string | null {
+                const childPath = path.join(this.path, child.name)
+                
+                // 중복 체크
+                const nameExists = this.children.some(existingChild => existingChild.name === child.name);
+                if (nameExists) {
+                        return `Error: A file or folder with the name ${child.name} already exists.`;
+                }
+                
+                // folder일 경우
+                if(child instanceof Folder) {
+                        fs.mkdirSync(childPath, {recursive : true})
+                } else if (child instanceof File) {
+                        fs.writeFileSync(childPath, '')
+                }
+                
+                this.children.push(child)
+                
+                return null
+        }
+        
+        remove() {
+                try {
+                        // Remove the folder and its contents from disk
+                        fs.rmdirSync(this.path, { recursive: true });
+                        return null;
+                } catch (err) {
+                        return `Error: Could not delete the folder. ${err}`;
+                }
+        }
+        
+        findChild(name : string) : FileEntity | null {
+                const childEntity = this.children.find(child => child.name === name)
+                return childEntity || null
+        }
+        
+        // children들을 읽는다.
         load() {
                 // path의 entry들을 읽는다.
                 const entries = fs.readdirSync(this.path, { withFileTypes : true })
@@ -86,7 +141,23 @@ class Folder implements FileEntity {
         }
 }
 
-const rootPath = './ex'
-const root = new Folder('root', rootPath)
-root.load()
-root.show(0)
+// const rootPath = './ex'
+// const root = new Folder('ex(root)', rootPath)
+
+// root.load()
+
+// console.log(root)
+
+// Folder {
+//         children: [
+//           File { name: '1.txt', path: 'ex/1.txt' },
+//           File { name: 'a.txt', path: 'ex/a.txt' },
+//           Folder { children: [Array], name: 'd1', path: 'ex/d1' },
+//           File { name: 'zz.png', path: 'ex/zz.png' }
+//         ],
+//         name: 'ex(root)',
+//         path: './ex'
+//       }
+
+
+// root.show(0)
