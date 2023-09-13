@@ -1,37 +1,8 @@
-/*
-        Composite 패턴은 개별 객체와 객체의 구성요소들(compositions)를 일관적으로 다룰 수 있게 해준다.
-        패턴은 두 가지 타입의 객체 "Composite", "Component"로  구성되어 있다.
-        
-        이 둘이 반드시 부모-자식 관계인 것은 아니고, tree 구조를 생성하는데 사용되는 방식으로 서로 연관되어있다.
-        
-        //
-        
-        1. Component
-        "Component"는 abstract class or interface로, 개별 객체와 그 컴포지션 (복합체?) 둘 모두에 적용하고 싶은 공통 작업을 선언한다.
-        Component class는 일반적으로 add(), remove(), getChild(), operation() 등이 있다.
-        
-        요약하자면 컴포넌트는 모든 concrete obj (leaves)와 그들의 복합체 (composites)를 위한 공통 인터페이스를 정의한다.
-        
-        
-        2. Composite
-        Composite는 concrete class로 Component interface를 구현한다.
-        또한, 컴포넌트의 집합 (다른 Composite나 leaf node가 이에 해당할 수 있음)을 포함한다.
-        
-        Composite class에서는 자식 컴포넌트에 요청을 전달하는 방향으로 Component 인터페이스에 정의된 method들이 구현된다.
-        
-        3. Relationship btw Component & Composite
-        - 부모 자식 관계 아님. Component interface의 user가 Composite라고 보면 된다.
-        - 객체 트리의 관점에서, Composite가 parent node, 그 child Component(leaf or other composite)가 child 대응한다고 볼 수 있다.
-        - Composite와 개별 객체 (leaves)모두 Component 인터페이스를 구현한다. 
-                따라서 client는 이 둘을 따로 구분하지 않고 동일한 방식으로 다룰 수 있다.
-        
-*/
-
 import fs from "fs";
 import path from "path"
 
 // act as component
-interface FileEntity {
+export interface FileEntity {
         // properties
         name : string;
         path : string;
@@ -39,7 +10,6 @@ interface FileEntity {
         // methods
         // indent : 앞에 몇 칸 띄울지..
         show(indent : number) : void
-        add?(child: FileEntity) : void
         remove() : string | null
 }
 
@@ -66,13 +36,15 @@ export class File implements FileEntity {
 export class Folder implements FileEntity {
         name : string;
         path : string;
+        parent : Folder | null = null
         
         // 폴더 내부의 파일들 목록인듯
         public children : FileEntity[] = [] 
         
-        constructor(name : string, path : string) {
+        constructor(name : string, path : string, parent : Folder | null = null) {
                 this.name = name
                 this.path = path
+                this.parent = parent
         }
 
         show(indent : number) {
@@ -82,16 +54,21 @@ export class Folder implements FileEntity {
                 }
         }
         
-        add(child: FileEntity) : string | null {
+        add(child: FileEntity) : any {
                 const childPath = path.join(this.path, child.name)
                 
-                // 중복 체크
+                const existingFolder = this.children.find(existingChild => 
+                        existingChild instanceof Folder && existingChild.name === child.name);
+                
+                if(existingFolder instanceof Folder && child instanceof Folder) {
+                        return existingFolder
+                }        
+                
                 const nameExists = this.children.some(existingChild => existingChild.name === child.name);
                 if (nameExists) {
-                        return `Error: A file or folder with the name ${child.name} already exists.`;
+                        return `Error: A file with the name ${child.name} already exists.`;
                 }
                 
-                // folder일 경우
                 if(child instanceof Folder) {
                         fs.mkdirSync(childPath, {recursive : true})
                 } else if (child instanceof File) {
@@ -100,12 +77,11 @@ export class Folder implements FileEntity {
                 
                 this.children.push(child)
                 
-                return null
+                return child instanceof Folder ? child : null
         }
         
         remove() {
                 try {
-                        // Remove the folder and its contents from disk
                         fs.rmdirSync(this.path, { recursive: true });
                         return null;
                 } catch (err) {
@@ -130,7 +106,7 @@ export class Folder implements FileEntity {
                         // entry가 폴더인 경우
                         if(entry.isDirectory()) {
                                 // 해당 폴더에서 파일이 나올 때까지 재귀적으로 호출
-                                const folder = new Folder(entry.name, entryPath)
+                                const folder = new Folder(entry.name, entryPath, this)
                                 folder.load()
                                 this.children.push(folder)
                         } else if (entry.isFile()) {
@@ -138,6 +114,14 @@ export class Folder implements FileEntity {
                                 this.children.push(file)
                         }
                 }
+        }
+        
+        setParent(parent : Folder) {
+                this.parent = parent
+        }
+        
+        getParent() {
+                return this.parent;
         }
 }
 

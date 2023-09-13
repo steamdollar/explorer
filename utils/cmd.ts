@@ -10,6 +10,17 @@ export const executeCommand = (input :string, currentFolder : Folder) : any => {
                         
                 case 'cd' :
                         const target = args[0]
+                        
+                        if(args[0] == "..") {
+                                const parentFolder = currentFolder.getParent()
+                                if(parentFolder !== null) {
+                                        return parentFolder
+                                } else {
+                                        console.log("Already at root folder")
+                                        return currentFolder
+                                }
+                        }
+                        
                         const nextFolder = currentFolder.findChild(target)
 
                         if(nextFolder instanceof Folder) {
@@ -17,22 +28,35 @@ export const executeCommand = (input :string, currentFolder : Folder) : any => {
                                 return nextFolder
                         } else {
                                 console.log('Target is not folder')
+                                return currentFolder
                         }
-                        break;
                 
                 case 'mkdir':
-                        // Create new folder
-                        const folderName = args[0];
-                        currentFolder.add(new Folder(folderName, `${currentFolder.path}/${folderName}`));
+                        const folderNames = args[0].split("/");
+                        let targetFolder = currentFolder
+                        
+                        for(const folderName of folderNames) {
+                                const newFolder = new Folder(folderName, `${targetFolder.path}/${folderName}`, targetFolder)
+                                targetFolder = targetFolder.add(newFolder)
+                        }
                         break;
-                          
+                                        
                 case 'touch':
-                        // Create new file
-                        const fileName = args[0];
-                        currentFolder.add(new File(fileName, `${currentFolder.path}/${fileName}`));
+                        const filePath = args[0].split("/");
+                        let dir = currentFolder
+                        for(const folder of filePath) {
+                                let l = 0
+                                const newFolder = new Folder(folder,`${dir.path}/${folder}`, dir )
+                                dir = dir.add(newFolder)
+                                if(l >= filePath.length - 2 ) {
+                                        break;
+                                }
+                                l++
+                        }
+                        
+                        dir.add(new File(filePath[filePath.length-1], `${currentFolder.path}/${filePath[filePath.length-1]}`));
                         break;
                           
-                        // Add more commands as needed
                 
                 case "rm" :
                         const nameToRemove = args[0]
