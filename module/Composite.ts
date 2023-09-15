@@ -221,17 +221,20 @@ export class Folder implements FileEntity {
                                 this.children.push(file);
                                 // 이게 어렵다.. 어쩌지..
                         } else if (entry.isSymbolicLink()) {
+                                // 이걸 잘라야 함.. 얘가 탐색기 루트 폴더가 되도록..
+                                console.log(entryPath);
                                 const targetPath = fs.readlinkSync(entryPath);
 
                                 // TODO : link의 path 수정
                                 // 지금 path가 절대경로로 나와서 중간을 잘라야 함..
+
+                                console.log(targetPath);
+
                                 const targetEntity = this.findEntryRecursively(
                                         targetPath,
                                         this,
                                         rootFolder!
                                 );
-
-                                console.log(targetEntity);
 
                                 if (
                                         targetEntity instanceof File ||
