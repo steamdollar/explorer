@@ -1,6 +1,6 @@
 import { File, Folder } from "../module/Composite";
 import { Link } from "../module/Link";
-import { ls, cd, mkdir, touch, ln, rm } from "./func";
+import { ls, cd, mkdir, touch, ln, rm, cat } from "./func";
 
 export const executeCommand = (
         input: string,
@@ -20,9 +20,9 @@ export const executeCommand = (
 
                 case "cd":
                         let newCurrentFolder = cd(
+                                args[0],
                                 currentFolder,
-                                rootFolder,
-                                args[0]
+                                rootFolder
                         );
                         return newCurrentFolder;
 
@@ -36,36 +36,15 @@ export const executeCommand = (
                         break;
 
                 case "rm":
-                        // TODO : recursive하게 동작하도록 바꿔서 subdir을 인식할 수 있도록..
-                        // const nameToRemove = args[0];
-                        // const childEntity =
-                        //         currentFolder.findChild(nameToRemove);
-                        // if (childEntity) {
-                        //         const removeResult = childEntity.remove();
-
-                        //         if (removeResult === null) {
-                        //                 // Successfully removed, so now update the 'children' array
-                        //                 const index =
-                        //                         currentFolder.children.indexOf(
-                        //                                 childEntity
-                        //                         );
-                        //                 currentFolder.children.splice(index, 1);
-                        //                 console.log(
-                        //                         `Removed ${nameToRemove} successfully.`
-                        //                 );
-                        //         } else {
-                        //                 console.log(removeResult);
-                        //         }
-                        // } else {
-                        //         console.log(
-                        //                 `Error: No file or folder with the name ${nameToRemove} exists.`
-                        //         );
-                        // }
                         rm(args[0], currentFolder, rootFolder);
                         break;
 
                 case "ln":
-                        ln(rootFolder, currentFolder, args);
+                        ln(args, currentFolder, rootFolder);
+                        break;
+
+                case "cat":
+                        cat(args, currentFolder, rootFolder);
                         break;
 
                 default:

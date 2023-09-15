@@ -20,9 +20,8 @@ export interface FileEntity {
 export class File implements FileEntity {
         constructor(
                 public name: string,
-                public path: string
-        ) // public parent : string
-        {}
+                public path: string // public parent : string
+        ) {}
 
         show(indent: number) {
                 console.log(`${" ".repeat(indent)}File: ${this.name}`);
@@ -90,7 +89,7 @@ export class Folder implements FileEntity {
                 }
         }
 
-        // for mkdir, touch
+        // for mkdir, touch, ln
         add(child: FileEntity | Link): any {
                 const childPath = path.join(this.path, child.name);
 
@@ -197,7 +196,7 @@ export class Folder implements FileEntity {
         }
 
         // children들을 읽는다.
-        load() {
+        load(rootFolder?: Folder) {
                 // path의 entry들을 읽는다.
                 const entries = fs.readdirSync(this.path, {
                         withFileTypes: true,
@@ -220,6 +219,31 @@ export class Folder implements FileEntity {
                         } else if (entry.isFile()) {
                                 const file = new File(entry.name, entryPath);
                                 this.children.push(file);
+                                // 이게 어렵다.. 어쩌지..
+                        } else if (entry.isSymbolicLink()) {
+                                const targetPath = fs.readlinkSync(entryPath);
+
+                                // TODO : link의 path 수정
+                                // 지금 path가 절대경로로 나와서 중간을 잘라야 함..
+                                const targetEntity = this.findEntryRecursively(
+                                        targetPath,
+                                        this,
+                                        rootFolder!
+                                );
+
+                                console.log(targetEntity);
+
+                                if (
+                                        targetEntity instanceof File ||
+                                        targetEntity instanceof Folder
+                                ) {
+                                        const link = new Link(
+                                                entry.name,
+                                                entryPath,
+                                                targetEntity
+                                        );
+                                        this.children.push(link);
+                                }
                         }
                 }
         }

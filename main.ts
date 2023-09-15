@@ -13,7 +13,7 @@ const rl = readline.createInterface({
 const rootFolder = new Folder("/", "//mnt/d/daily/project/file_explorer/ex");
 
 let currentFolder = new Folder("/", "//mnt/d/daily/project/file_explorer/ex");
-currentFolder.load();
+currentFolder.load(rootFolder);
 
 rl.prompt();
 

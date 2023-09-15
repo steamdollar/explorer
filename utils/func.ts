@@ -12,13 +12,10 @@ export const ls = (currentFolder: Folder) => {
         );
 };
 
-// 뭔가 이상한데.. 이 함수가 이렇게 커도 되나?
-// class 안의 method들이 재귀적이어야 하는거 아닌가?
-// 얘가 재귀적이어도 되나?
 export const cd = (
+        target: string,
         currentFolder: Folder,
-        rootFolder: Folder,
-        target: string
+        rootFolder: Folder
 ) => {
         if (target === "..") {
                 const parentFolder = currentFolder.getParent();
@@ -55,13 +52,17 @@ export const mkdir = (
                 path = path.substring(1);
         }
 
-        const folderNames = path.split("/");
-        let targetFolder = startFolder;
+        let dir = startFolder;
 
-        for (const folderName of folderNames) {
-                const newFolder = new Folder(folderName, path, targetFolder);
-                // subdir이 있는 경우 target을 계속 바꿔주며 진입해야함.
-                targetFolder = targetFolder.add(newFolder);
+        const filePath = path.split("/");
+
+        for (const folder of filePath) {
+                const newFolder = new Folder(
+                        folder,
+                        `${dir.path}/${folder}`,
+                        dir
+                );
+                dir = dir.add(newFolder) as Folder;
         }
 };
 
@@ -76,29 +77,21 @@ export const touch = (
                 path = path.substring(1);
         }
 
-        const filePath = path.split("/");
         let dir = startFolder;
 
+        const filePath = path.split("/");
+        const route = filePath.pop();
+
         for (const folder of filePath) {
-                let l = 0;
                 const newFolder = new Folder(
                         folder,
                         `${dir.path}/${folder}`,
                         dir
                 );
-                dir = dir.add(newFolder);
-                if (l >= filePath.length - 2) {
-                        break;
-                }
-                l++;
+                dir = dir.add(newFolder) as Folder;
         }
 
-        dir.add(
-                new File(
-                        filePath[filePath.length - 1],
-                        `${currentFolder.path}/${filePath[filePath.length - 1]}`
-                )
-        );
+        dir.add(new File(route!, `${currentFolder.path}/${route}`));
 };
 
 export const rm = (path: string, currentFolder: Folder, rootFolder: Folder) => {
@@ -116,33 +109,63 @@ export const rm = (path: string, currentFolder: Folder, rootFolder: Folder) => {
 
         if (target instanceof Folder || target instanceof File) {
                 target.remove();
-                currentFolder.children.filter((v) => v !== target);
+                currentFolder.children = currentFolder.children.filter(
+                        (v) => v !== target
+                );
         } else {
                 console.error(`Err : Cannot find Entity : ${path}`);
         }
 };
 
 export const ln = (
-        rootFolder: Folder,
+        args: string[],
         currentFolder: Folder,
-        args: string[]
+        rootFolder: Folder
 ) => {
-        const targetName = args[0];
-        const linkName = args[1];
+        let target = args[0];
+        let sym = args[1];
+
+        let startFolder = isAbs(target) ? rootFolder : currentFolder;
+
+        if (isAbs(target)) {
+                target = target.substring(1);
+        }
 
         const targetEntity = rootFolder.findEntryRecursively(
-                targetName,
+                target,
                 currentFolder,
                 rootFolder
         );
+
         if (targetEntity) {
                 const newLink = new Link(
-                        linkName,
-                        `${currentFolder.path}/${linkName}`,
+                        args[1],
+                        `${currentFolder.path}/${args[1]}`,
                         targetEntity
                 );
                 currentFolder.add(newLink);
         } else {
                 console.error(`Error : Target Entity doesn't exist.`);
+        }
+};
+
+export const cat = (
+        args: string[],
+        currentFolder: Folder,
+        rootFolder: Folder
+) => {
+        const targetEntity = rootFolder.findEntryRecursively(
+                args[0],
+                currentFolder,
+                rootFolder
+        );
+
+        if (
+                targetEntity &&
+                (targetEntity instanceof File || targetEntity instanceof Link)
+        ) {
+                targetEntity.readStream();
+        } else {
+                console.error(`There is no file named ${targetEntity}`);
         }
 };
