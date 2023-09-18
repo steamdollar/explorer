@@ -1,5 +1,6 @@
 import { Folder, File, FileEntity } from "../module/Composite";
 import { Link } from "../module/Link";
+import { SizeCalculator } from "../module/visitor";
 
 const isAbs = (path: string): boolean => {
         return path.startsWith("/");
@@ -167,5 +168,34 @@ export const cat = (
                 targetEntity.readStream();
         } else {
                 console.error(`There is no file named ${targetEntity}`);
+        }
+};
+
+export const size = (
+        targetPath: string,
+        currentFolder: Folder,
+        rootFolder: Folder
+) => {
+        let startFolder = isAbs(targetPath) ? rootFolder : currentFolder;
+
+        if (isAbs(targetPath)) {
+                targetPath = targetPath.substring(1);
+        }
+
+        const targetEntity = rootFolder.findEntryRecursively(
+                targetPath,
+                currentFolder,
+                rootFolder
+        );
+
+        if (targetEntity) {
+                const sizeCalculator = new SizeCalculator();
+                targetEntity.accept(sizeCalculator);
+
+                console.log(
+                        `${targetPath} - size : ${sizeCalculator.getTotalSize()}`
+                );
+        } else {
+                console.error(`target doesn't exist`);
         }
 };

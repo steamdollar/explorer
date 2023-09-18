@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { Link } from "./Link";
-import { publicDecrypt } from "crypto";
+import { rootDir } from "../utils/env";
+import { FileSystemVisitor, SizeCalculator } from "./visitor";
 
 // act as component
 export interface FileEntity {
@@ -14,14 +15,23 @@ export interface FileEntity {
         // indent : 앞에 몇 칸 띄울지..
         show(indent: number): void;
         remove(): string | null | void;
+        getSize(): number;
+
+        accept(visitor: FileSystemVisitor): void;
 }
 
 // composite (leaf)
 export class File implements FileEntity {
+        static rootDir = rootDir;
+
         constructor(
                 public name: string,
                 public path: string // public parent : string
         ) {}
+
+        accept(visitor: FileSystemVisitor): void {
+                visitor.visitFile(this);
+        }
 
         show(indent: number) {
                 console.log(`${" ".repeat(indent)}File: ${this.name}`);
@@ -65,6 +75,10 @@ export class File implements FileEntity {
                         console.error(`Err : ${err.message}`);
                 });
         }
+
+        getSize(): number {
+                return fs.statSync(this.path).size;
+        }
 }
 
 // composite (composition)
@@ -72,13 +86,20 @@ export class Folder implements FileEntity {
         name: string;
         path: string;
         parent: Folder | null = null;
+        static rootDir = rootDir;
 
-        public children: FileEntity[] = [];
+        public children: (FileEntity | Link)[] = [];
 
         constructor(name: string, path: string, parent: Folder | null = null) {
                 this.name = name;
                 this.path = path;
                 this.parent = parent;
+        }
+
+        accept(visitor: FileSystemVisitor): void {
+                if (visitor instanceof SizeCalculator) {
+                        visitor.visitFolder(this);
+                }
         }
 
         // for ls
@@ -144,7 +165,7 @@ export class Folder implements FileEntity {
                 }
         }
 
-        findChild(name: string): FileEntity | null {
+        findChild(name: string): FileEntity | Link | null {
                 const childEntity = this.children.find(
                         (child) => child.name === name
                 );
@@ -222,16 +243,16 @@ export class Folder implements FileEntity {
                                 // 이게 어렵다.. 어쩌지..
                         } else if (entry.isSymbolicLink()) {
                                 // 이걸 잘라야 함.. 얘가 탐색기 루트 폴더가 되도록..
-                                console.log(entryPath);
+
                                 const targetPath = fs.readlinkSync(entryPath);
 
                                 // TODO : link의 path 수정
                                 // 지금 path가 절대경로로 나와서 중간을 잘라야 함..
 
-                                console.log(targetPath);
-
                                 const targetEntity = this.findEntryRecursively(
-                                        targetPath,
+                                        targetPath.substring(
+                                                rootDir.length + 1
+                                        ),
                                         this,
                                         rootFolder!
                                 );
@@ -253,6 +274,16 @@ export class Folder implements FileEntity {
 
         getParent() {
                 return this.parent;
+        }
+
+        getSize(): number {
+                let totalSize = 0;
+
+                for (const child of this.children) {
+                        totalSize += child.getSize();
+                }
+
+                return totalSize;
         }
 
         isAbs(targetPath: string): boolean {

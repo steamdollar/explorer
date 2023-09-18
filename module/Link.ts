@@ -1,5 +1,6 @@
 import fs from "fs";
 import { FileEntity, Folder, File } from "./Composite";
+import { FileSystemVisitor } from "./visitor";
 
 export class Link implements FileEntity {
         name: string;
@@ -10,6 +11,10 @@ export class Link implements FileEntity {
                 this.name = name;
                 this.path = path;
                 this.target = target;
+        }
+
+        accept(visitor: FileSystemVisitor): void {
+                visitor.visitLink(this);
         }
 
         show(indent: number): void {
@@ -57,5 +62,9 @@ export class Link implements FileEntity {
                 if (this.target instanceof Folder) {
                         return this.target.parent;
                 }
+        }
+
+        getSize(): number {
+                return fs.statSync(this.path).size;
         }
 }

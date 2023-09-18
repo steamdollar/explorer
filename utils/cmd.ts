@@ -1,6 +1,5 @@
 import { File, Folder } from "../module/Composite";
-import { Link } from "../module/Link";
-import { ls, cd, mkdir, touch, ln, rm, cat } from "./func";
+import { ls, cd, mkdir, touch, ln, rm, cat, size } from "./func";
 
 export const executeCommand = (
         input: string,
@@ -47,7 +46,11 @@ export const executeCommand = (
                         cat(args, currentFolder, rootFolder);
                         break;
 
+                case "size":
+                        size(args[0], currentFolder, rootFolder);
+                        break;
+
                 default:
-                        console.log("Unknown command");
+                        console.error("Unknown command");
         }
 };
